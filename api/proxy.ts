@@ -19,6 +19,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // Validation: limit owner to camofy or MetaCubeX
+  const parts = pathStr.split('/');
+  const owner = parts[0];
+  const allowedOwners = ['camofy', 'MetaCubeX'];
+
+  if (!owner || !allowedOwners.some(o => o.toLowerCase() === owner.toLowerCase())) {
+    res.status(403).send('Forbidden: Only camofy and MetaCubeX repositories are allowed.');
+    return;
+  }
+
   // target: https://github.com/<path>
   // Preserve query parameters from the original request if any (excluding the 'path' param itself which we consumed)
   // req.url contains the rewritten URL e.g. /api/proxy?path=...
