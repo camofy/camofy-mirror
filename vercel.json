@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/:owner/:repo/:rest*",
-      "destination": "/api/proxy/:owner/:repo/:rest*"
+      "source": "/:path((?!api/).*)",
+      "destination": "/api/proxy/:path*"
     }
   ]
 }
