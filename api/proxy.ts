@@ -21,8 +21,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Validation: limit owner to camofy or MetaCubeX
   const parts = pathStr.split('/');
-  const owner = parts[0];
   const allowedOwners = ['camofy', 'MetaCubeX'];
+
+  let owner: string | undefined;
+  let baseUrl = 'https://github.com';
+
+  if (parts[0] === 'repos') {
+      // API request: https://api.github.com/repos/OWNER/REPO/...
+      owner = parts[1];
+      baseUrl = 'https://api.github.com';
+  } else {
+      // Standard GitHub web URL
+      owner = parts[0];
+  }
 
   if (!owner || !allowedOwners.some(o => o.toLowerCase() === owner.toLowerCase())) {
     res.status(403).send('Forbidden: Only camofy and MetaCubeX repositories are allowed.');
@@ -48,7 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
   const searchString = searchParams.toString();
-  const targetUrl = `https://github.com/${pathStr}${searchString ? '?' + searchString : ''}`;
+  const targetUrl = `${baseUrl}/${pathStr}${searchString ? '?' + searchString : ''}`;
 
   console.log('Forwarding to:', targetUrl);
 
