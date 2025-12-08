@@ -39,17 +39,6 @@ https://mirror.camofy.app/camofy/camofy/releases/latest/download/camofy-linux-am
 
 来统一走代理。
 
-## 实现说明
-
-- `vercel.json`
-  - 使用 Vercel v2 配置，将所有请求路由到 `api/proxy/[...path].ts`。
-  - 访问路径保持与 GitHub 一致，仅域名不同。
-- `api/proxy/[...path].ts`
-  - 动态捕获路径段，并仅允许代理 `camofy/camofy` 仓库，避免成为通用开放代理。
-  - 将请求转发到：
-    - `https://github.com/<owner>/<repo>/<...rest>`
-  - 透传状态码与部分响应头（`Content-Type` / `Cache-Control`），并以流式方式转发响应体。
-
 ## 部署到 Vercel
 
 1. 将 `camofy-mirror` 目录内容复制到一个单独的 Git 仓库（或在本仓库中选择 `camofy-mirror` 作为项目根目录）。  
