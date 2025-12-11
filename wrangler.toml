@@ -1,0 +1,9 @@
+name = "camofy-mirror"
+main = "worker.ts"
+compatibility_date = "2024-01-01"
+
+# 将 Worker 绑定到 mirror.camofy.app/*
+# 注意：camofy.app 需要已经接入 Cloudflare
+routes = [
+  { pattern = "mirror.camofy.app/*", zone_name = "camofy.app" }
+]

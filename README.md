@@ -1,6 +1,6 @@
-# camofy-mirror（Vercel 代理示例）
+# camofy-mirror（Vercel / Cloudflare Workers 代理示例）
 
-本目录提供一个在 Vercel 上部署的代理示例，用于将原本访问 GitHub 的路径切换为访问自定义域名（例如 `mirror.camofy.app`），从而绕过客户端环境对 GitHub 的访问限制。
+本目录提供一个在 Vercel 或 Cloudflare Workers 上部署的代理示例，用于将原本访问 GitHub 的路径切换为访问自定义域名（例如 `mirror.camofy.app`），从而绕过客户端环境对 GitHub 的访问限制。
 
 ## 设计目标
 
@@ -58,4 +58,68 @@ https://mirror.camofy.app/camofy/camofy/releases/latest/download/camofy-linux-am
    ```
 
    等路径完成安装和下载。
+
+## 部署到 Cloudflare Workers
+
+Cloudflare Workers 版本在 `worker.ts` 中，逻辑与 Vercel 版本保持一致：
+
+- 保留原始路径结构，只是更换域名；
+- 只允许代理 `camofy` 和 `MetaCubeX` 两个 GitHub 账号下的仓库；
+- 同时兼容 `https://github.com/...` 和 `https://api.github.com/repos/...` 两种访问方式。
+
+### 准备
+
+1. 安装 Wrangler（本地未安装时）：
+
+   ```sh
+   npm install -g wrangler
+   # 或者在项目中：
+   npm install -D wrangler
+   ```
+
+2. 登录 Cloudflare：
+
+   ```sh
+   wrangler login
+   ```
+
+### 配置
+
+仓库中已经提供了基础的 `wrangler.toml`：
+
+```toml
+name = "camofy-mirror"
+main = "worker.ts"
+compatibility_date = "2024-01-01"
+```
+
+根据自己的情况可以在 Cloudflare 控制台或 `wrangler.toml` 中配置路由，例如：
+
+```toml
+routes = ["https://mirror.camofy.app/*"]
+```
+
+> 注意：请将 `mirror.camofy.app` 替换为你自己的域名。
+
+### 部署
+
+在项目根目录执行：
+
+```sh
+wrangler deploy
+```
+
+部署完成后，即可通过：
+
+```sh
+curl -fsSL https://你的域名/camofy/camofy/raw/main/install.sh | sh
+```
+
+以及：
+
+```text
+https://你的域名/camofy/camofy/releases/latest/download/camofy-linux-amd64
+```
+
+等路径进行安装和下载，效果与 Vercel 部署基本一致。
 
