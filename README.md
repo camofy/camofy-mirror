@@ -91,15 +91,21 @@ Cloudflare Workers 版本在 `worker.ts` 中，逻辑与 Vercel 版本保持一�
 name = "camofy-mirror"
 main = "worker.ts"
 compatibility_date = "2024-01-01"
+routes = [
+  { pattern = "mirror.camofy.app/*", zone_name = "camofy.app" }
+]
 ```
 
 根据自己的情况可以在 Cloudflare 控制台或 `wrangler.toml` 中配置路由，例如：
 
 ```toml
-routes = ["https://mirror.camofy.app/*"]
+# 示例：绑定到其它域名
+routes = [
+  { pattern = "your-domain.example.com/*", zone_name = "example.com" }
+]
 ```
 
-> 注意：请将 `mirror.camofy.app` 替换为你自己的域名。
+> 注意：请将域名替换为你自己的实际域名。
 
 ### 部署
 
@@ -122,4 +128,43 @@ https://你的域名/camofy/camofy/releases/latest/download/camofy-linux-amd64
 ```
 
 等路径进行安装和下载，效果与 Vercel 部署基本一致。
+
+## 使用 GitHub Token 提升额度
+
+GitHub 的未认证请求存在较低的 rate limit，如果你有 GitHub Token，可以让代理在访问 GitHub 时携带该 Token，从而提高限额。
+
+本项目支持两种方式提供 GitHub Token（Vercel 和 Cloudflare Workers 均适用）：
+
+1. **通过环境变量配置（推荐）**
+
+   - 在 Vercel 项目设置中，添加环境变量：
+
+     - `GITHUB_TOKEN=<你的 GitHub Token>`
+
+   - 在 Cloudflare Workers 中，设置同名机密（Secret）：
+
+     ```sh
+     wrangler secret put GITHUB_TOKEN
+     # 按提示输入你的 Token
+     ```
+
+   - 部署后，所有经过代理的请求都会自动携带该 Token 访问 GitHub，无需在 URL 或请求头中暴露 Token。
+
+2. **在请求中显式携带 Token（只在你完全了解风险时使用）**
+
+   - 通过请求头：
+
+     ```sh
+     curl -H "X-GitHub-Token: <你的 GitHub Token>" https://mirror.camofy.app/camofy/camofy/raw/main/install.sh
+     ```
+
+   - 或通过查询参数（注意：Token 会出现在 URL 中，安全性更低）：
+
+     ```text
+     https://mirror.camofy.app/camofy/camofy/raw/main/install.sh?gh_token=<你的 GitHub Token>
+     ```
+
+   - 这两种方式都会被代理转换为对 GitHub 的 `Authorization: token <你的 GitHub Token>` 请求头，用于提升 API 调用额度。
+
+> 建议优先使用环境变量 / Secret 的方式在服务端配置 Token，避免在 URL、脚本或日志中泄露个人访问令牌。
 

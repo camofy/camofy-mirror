@@ -50,7 +50,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(req.query)) {
-    if (key !== 'path') {
+    if (key === 'path' || key === 'gh_token' || key === 'token') {
+      continue;
+    }
+    if (value !== undefined) {
       if (Array.isArray(value)) {
         value.forEach(v => searchParams.append(key, v));
       } else {
@@ -64,16 +67,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('Forwarding to:', targetUrl);
 
   try {
+    // Optional GitHub token to increase rate limit
+    let githubToken: string | undefined;
+
+    const headerToken = req.headers['x-github-token'];
+    if (Array.isArray(headerToken)) {
+      githubToken = headerToken[0];
+    } else if (typeof headerToken === 'string') {
+      githubToken = headerToken;
+    }
+
+    if (!githubToken) {
+      const queryToken = (req.query['gh_token'] ?? req.query['token']) as
+        | string
+        | string[]
+        | undefined;
+      if (Array.isArray(queryToken)) {
+        githubToken = queryToken[0];
+      } else if (typeof queryToken === 'string') {
+        githubToken = queryToken;
+      }
+    }
+
+    if (!githubToken && process.env.GITHUB_TOKEN) {
+      githubToken = process.env.GITHUB_TOKEN;
+    }
+
     // Prepare headers to forward
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) {
-      if (key !== 'host' && !key.startsWith('x-vercel-') && !key.startsWith('x-forwarded-') && value) {
-         if (Array.isArray(value)) {
-           value.forEach(v => headers.append(key, v));
-         } else {
-           headers.append(key, value);
-         }
+      if (
+        key === 'host' ||
+        key === 'x-github-token' ||
+        key.startsWith('x-vercel-') ||
+        key.startsWith('x-forwarded-') ||
+        !value
+      ) {
+        continue;
       }
+      if (Array.isArray(value)) {
+        value.forEach(v => headers.append(key, v));
+      } else {
+        headers.append(key, value);
+      }
+    }
+
+    if (githubToken) {
+      headers.set('authorization', `token ${githubToken}`);
     }
 
     const response = await fetch(targetUrl, {
@@ -103,4 +143,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(500).send('Internal Server Error');
   }
 }
-

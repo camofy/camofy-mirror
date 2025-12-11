@@ -1,7 +1,7 @@
 const allowedOwners = ['camofy', 'MetaCubeX'];
 
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: { GITHUB_TOKEN?: string }): Promise<Response> {
     const url = new URL(request.url);
     const pathStr = url.pathname.replace(/^\/+/, '');
 
@@ -27,19 +27,51 @@ export default {
       return new Response('Forbidden: Only camofy and MetaCubeX repositories are allowed.', { status: 403 });
     }
 
-    const searchString = url.searchParams.toString();
+    const searchParams = new URLSearchParams(url.searchParams);
+    searchParams.delete('gh_token');
+    searchParams.delete('token');
+
+    const searchString = searchParams.toString();
     const targetUrl = `${baseUrl}/${pathStr}${searchString ? `?${searchString}` : ''}`;
 
     console.log('Forwarding to:', targetUrl);
 
     try {
+      // Optional GitHub token to increase rate limit
+      let githubToken: string | undefined;
+
+      const headerToken = request.headers.get('x-github-token');
+      if (headerToken) {
+        githubToken = headerToken;
+      }
+
+      if (!githubToken) {
+        const queryToken = url.searchParams.get('gh_token') ?? url.searchParams.get('token');
+        if (queryToken) {
+          githubToken = queryToken;
+        }
+      }
+
+      if (!githubToken && env.GITHUB_TOKEN) {
+        githubToken = env.GITHUB_TOKEN;
+      }
+
       const headers = new Headers();
       request.headers.forEach((value, key) => {
-        if (key === 'host' || key.startsWith('cf-') || key.startsWith('x-forwarded-')) {
+        if (
+          key === 'host' ||
+          key === 'x-github-token' ||
+          key.startsWith('cf-') ||
+          key.startsWith('x-forwarded-')
+        ) {
           return;
         }
         headers.append(key, value);
       });
+
+      if (githubToken) {
+        headers.set('authorization', `token ${githubToken}`);
+      }
 
       const method = request.method.toUpperCase();
       const hasBody = method !== 'GET' && method !== 'HEAD';
@@ -66,4 +98,3 @@ export default {
     }
   },
 };
-
